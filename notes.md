@@ -83,3 +83,185 @@ CORS_ALLOW_CREDENTIALS = True
 ## Dependencies
 
 - Once installed, the dependencies will be on env > lib > python_version > list of dependencies
+
+## JWT
+
+- Json Web Token
+- Commonly used in authentication and authorization flows
+
+```js
+{
+    "headers": {
+        "Authorization": "Bearer XXXX.YYYY.ZZZZ"
+                            // header.payload.signature
+    }
+}
+```
+
+- The backend needs to know who we're and which permissions we have
+
+### Authorization
+
+1. Client signs in/registers. User enters login crendentials
+2. Server verifies credentials and returns JWT
+   - This JWT contains claims about the user's permission to application/website
+   - Now, the JWT works as a "badge", which goes with the user where he goes. It's like we're in a factory and through the "badge" the user has some access or no to the structure of the factory
+   - Never store JWT in local storage or session data
+   - Instead, they should be stored in a HttpOnly cookie. This isn't accessible from JavaScript/browser code
+3. Client submits token in every future request
+   3.1. This is what allows the client to access routes/services/resources
+
+### Structure
+
+JWTs are composed of:
+
+1. Header => XXXXXX.
+
+   - The header is further divided into two pieces, being:
+     - 1.1 Type of token
+     - 1.2 Type of algorithm being used
+
+   ```js
+   {
+       "type": "Bearer",
+       "algorithm": "RSA"
+   }
+   ```
+
+   - This information is encoded with "base64urlEncoded"
+
+2. Payload => YYYYYY.
+
+   - Contains the claims: information about the client, entity or any additional data
+     - 2.1 Registered claims
+     - 2.2 Public claims
+     - 2.3 Private claims
+
+   ```js
+    // each of these lines is a claim
+   {
+      "username": "Matt",
+      "admin": true,
+      "exp": 12345678, // unix format
+   }
+   ```
+
+   - Only store sensitive data in your payload if it's encrypted
+     - Encryption: transforming human-readable plain text into incomprehensibe text (ciphertext)
+     - Digital signature: a type of electronic signature that encrypts docs with digital codes
+
+3. Signature => ZZZZZZ.
+
+   - Encoded header + encoded payload + SECRET_KEY
+   - Takes all this info to check if the data has been tempered with or if it's reliable
+
+### Types of Tokens
+
+- Access token: what will grant us access. What is used with the requests
+- Refresh token: used to refresh the access token
+  - Once the access token is expired, the refresh token will be submitted to the server. If the refresh token is valid, a new access token will be generated
+
+Once the front-end receives them, it will store them in the cookies. So, we don't need to keep revalidating all the time.
+
+## Serializers
+
+They are like interpreters
+
+- Serializers in Django REST Framework (DRF) are used to:
+  - Convert our data into JSON format and vice versa
+  - Convert Python objects (like Django models) into JSON, which can be consumed by the frontend
+  - Validate incoming JSON data and convert it into Python objects for backend use
+- JSON: JavaScript Object Notation, a lightweight data-interchange format
+- ORM: Object-Relational Mapping, a programming technique for converting data between different systems
+  - Python ORM: We write Python code, and it transforms it into database instructions
+
+```py
+# project > app > serializers.py
+# server > api > serializers.py
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User # the model to serialize
+        fields = ["id", "username", "password"] # the fields to serialize
+        extra_kwargs = {"password": {"write_only": True}} # make sure the password is not returned in the response
+
+    # we override the create method
+    def create(self, validated_data):
+        # User.objects.create_user => handles password hashing
+        # by using it, we automatically hash the password before storing them
+        user = User.objects.create_user(**validated_data) # ** is used to unpack the dictionary
+        return user
+```
+
+## View
+
+- Views in DRF handle HTTP requests and response. They:
+  - Receive requests (ex: POST to create a user)
+  - Process data (ex: validate, save, or fetch data)
+  - Return appropriate responses (ex: JSON for success or error messages)
+
+```py
+# project > app > views.py
+# server > api > views.py
+
+# generics.CreateAPIView: simplifies the creation of a resource by reducing boilerplat
+
+class CreateUserView(generics.CreateAPIView):
+    queryset = User.objects.all() # queryset: specify the data this view works with
+    serializer_class = User # serializer_class: specify the serializer used to validate and transform data
+    permission_classes = [AllowAny] # permission_classes: defines who can access this view
+```
+
+## Flow
+
+> Request: Client -> URL -> View -> Serializer -> DB
+> Response: DB -> Serializer -> View -> Client
+
+```py
+Client
+    ↓ POST /api/users/
+Django URLs (urls.py)
+   ↓ Match URL pattern → Route to view
+View (views.py)
+   ↓ Handle request → Call serializer
+Serializer (serializer.py)
+   ↓ Validate → Process → Save to DB
+Database (models.py)
+   ↓ Save user → Return Python object
+View (views.py)
+   ↓ Conver Python object → JSON response
+Client
+```
+
+1. Frontend sends a request (ex: `POST /api/users/`) to the backend. Request usually includes:
+
+   - URL: endpoint for the action (`api/users`)
+   - HTTP Method: defines the action (POST, GET, DELETE, PUT)
+   - Headers: metadata, like `Content-Type` or authorization tokens
+   - Body: the data payload
+
+2. Django URLS receive the request and direct to the appropriate view
+
+   ```py
+       urlpatterns = [
+       path('users/', CreateUserView.as_view(), name='create_user'),
+       ]
+
+       # when the backend servers the POST /api/users/ django matches the URL pattern and calss the CreateUserView.as_view()
+   ```
+
+3. View receives and handles the request
+
+   - Retrieves and validates the incoming data
+   - Uses the serializer to transform and process ata
+   - Interacts with the db to perform operation
+   - Prepares the response
+
+4. Serializer will validate and convert the data
+
+   - Validates the incoming data
+   - Converts JSON into Python for backend use
+   - Handles logic
+   - Converts Python objects back to JSON for the response
+
+5. Response is returned to the frontend with the created user data
