@@ -1,5 +1,31 @@
 # Backend
 
+### Quick reflection: Node vs. Django
+
+#### Django
+
+- Principles:
+
+  - Batteries included: project comes together with all possible parts required for full usability
+  - Convention over configuration: Core components (models, views, serializers, forms, etc) have a predefined structure
+
+- Built-in features:
+
+  - Django comes with ORM, migrations, authentication, admin panel out of the box
+
+- Explict design:
+  - Layers have specific roles:
+    - Models: define data
+    - Serializers: handle data transformation
+    - Views: manage request/response logic
+    - URLS: map views to endpoints
+
+#### Node
+
+- Flexibility
+- Configuration over convention
+- Architectural decisions rely mainly on the developer
+
 ## Getting Started
 
 ```bash
@@ -208,8 +234,55 @@ class UserSerializer(serializers.ModelSerializer):
 
 class CreateUserView(generics.CreateAPIView):
     queryset = User.objects.all() # queryset: specify the data this view works with
-    serializer_class = User # serializer_class: specify the serializer used to validate and transform data
+    serializer_class = UserSerializer # serializer_class: specify the serializer used to validate and transform data
     permission_classes = [AllowAny] # permission_classes: defines who can access this view
+```
+
+### Django REST Framework (DRF) API Handling
+
+#### Generic Views
+
+Handle common CRUD operations with minimal boilerplate code. They are3 based on querysets and serializers.
+
+- They provide functionality such as: list, retrieve, create, update, destroy
+
+```py
+class BlogPostListView(generics.ListAPIView):
+   queryset = BlogPost.objects.all()
+   serializer_class = BlogPostSerializers
+```
+
+Types:
+
+- ListAPIView: GET list all
+- CreatAPIView: POST
+- RetrievedAPIView: GET single entity
+- UpdateAPIView: PUT or PATCH
+- DestroyAPIView: DELETE
+- ListCreateAPIView: GET (list) + POST
+- RetrieveUpdateDestoryAPIView: GET(single entity) + PUT/PATCH + DELETE
+
+#### APIView
+
+Most basic DRF view. It gives full control over the request handling, but requires more boilerplate
+
+```py
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+
+class BlogPostAPIView(APIView):
+   def get(self, request):
+      posts = BlogPost.objects.all()
+      serializer = BlogPostSerializer(posts, many=True) # doing something similar to zod
+      return Response(serializer.data)
+
+   def post(self, request):
+      serializer = BlogPostSerializer(data=request.data)
+      if serializer.is_valid():
+         serializer.save()
+         return Response(serializer.data, status=status.HTTP_201_CREATED)
+      return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 ```
 
 ## Flow
@@ -219,7 +292,7 @@ class CreateUserView(generics.CreateAPIView):
 
 ```py
 Client
-    ↓ POST /api/users/
+   ↓ POST /api/users/
 Django URLs (urls.py)
    ↓ Match URL pattern → Route to view
 View (views.py)
@@ -265,3 +338,88 @@ Client
    - Converts Python objects back to JSON for the response
 
 5. Response is returned to the frontend with the created user data
+
+## Creating user + Testing the auth
+
+- Go to: `server/api/users/register` -> create the user
+- Go to: `server/api/token` -> add credentials and get token
+  - This will give us a refresh and access token. This is what the front-end would store
+- In case we want to refresh the access token, go to: `server/api/token/refresh` and add the refresh token there. It will generate a new access token.
+
+## Django Workflow
+
+Define the model -> Apply Migrations -> Create Serializer -> Create View -> Configure URL -> Test the API
+Model -> Migration -> Serializer -> View -> URL (MMSVU: My mother sings very uniquely)
+
+1. Define the model: Create the database structure for the data
+
+- Create model in app's `model.py`
+- Define the fields and their types
+
+```py
+from django.db import models
+
+class BlogPost(models.Model):
+   title = models.CharField(max_length=100)
+   content = models.TextField()
+   created_at = models.DateTimeField(auto_now_add=True)
+   updated_at = models.DateTimeField(auto_now=True)
+
+   def __str__(self):
+      return self.title
+```
+
+2. Apply Migrations: Sync the model with the database
+
+```bash
+python manage.py makemigrations # generate migration files
+python manage.py migrate # apply the migrations to the db
+```
+
+3. Create the serializer: Define how the model's data is converted to/from JSON
+
+- Create the serializer in app's `serializers.py`
+- Use `ModelSerializer` for most use cases
+
+```py
+from rest_framework import serializers
+from .models import BlogPost
+
+class BlogPostSerializer(serializers.ModelSerializer):
+   class Meta:
+      model = BlogPost
+      fields = ['id', 'title', 'content', 'created_at', 'updated_at']
+```
+
+4. Create Views: handle requests and perform actions (CRUD)
+
+- Use DRF generic views for common actions (ex: CRUD)
+- Assign the serializer and queryset to the view
+
+```py
+from rest_framework import generics
+from .models import BlogPost
+from .serializers import BlogPostSerializer
+
+class BlogPostListCreateView(generics.ListCreateAPIView):
+   queryset = BlogPost.objecs.all()
+   serializer_class = BlogPostSerializer
+
+class BlogPostDetailView(generics.RetrieveUpdateDestroyAPIView):
+   queryset = BlogPost.objects.all()
+   serializer_class = BlogPostSerializer
+```
+
+5. Configure the URL: Map the views to specific endpoints
+
+- Add URL pattern in project's `urls.py`
+
+```py
+from django.urls import path
+from .views import BlogPostListCreateView, BlogPostDetailView
+
+urlsPatterns = [
+   path("blogposts/", BlogPostListCreateView.as_view(), name="blogpost-list-create"),
+   path("blogposts/<int:pk>/", BlogPostDetailView.as_view(), name="blogpost-detail")
+]
+```

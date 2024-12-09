@@ -1,10 +1,6 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-
-# Serializer: we will use this to convert our data into JSON format and vice versa
-# JSON: JavaScript Object Notation, a lightweight data-interchange format
-# ORM: Object-Relational Mapping, a programming technique for converting data between different systems
-    # Python ORM: We write Python code, and it transforms it into database instructions
+from .models import Note
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -15,3 +11,4 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data) # ** is used to unpack the dictionary
         return user
+    
