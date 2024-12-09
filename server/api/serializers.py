@@ -12,3 +12,8 @@ class UserSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**validated_data) # ** is used to unpack the dictionary
         return user
     
+class NoteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Note
+        fields = ["id", "title", "content", "created_at", "author"]
+        extra_kwards = {"author": {"read_only":True}} # the author field should not be modified by the user

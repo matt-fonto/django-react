@@ -26,6 +26,19 @@
 - Configuration over convention
 - Architectural decisions rely mainly on the developer
 
+### Django Concepts
+
+1. Apps: Inside the project, there can be multiple apps
+   Project/
+   ├── App1/
+   │ ├── models/
+   │ ├── views/
+   │ ├── urls/
+   ├── App2/
+   │ ├── models/
+   │ ├── views/
+   │ ├── urls/
+
 ## Getting Started
 
 ```bash
@@ -199,7 +212,10 @@ They are like interpreters
   - Validate incoming JSON data and convert it into Python objects for backend use
 - JSON: JavaScript Object Notation, a lightweight data-interchange format
 - ORM: Object-Relational Mapping, a programming technique for converting data between different systems
+
   - Python ORM: We write Python code, and it transforms it into database instructions
+
+![Serializer View](https://miro.medium.com/v2/resize:fit:1000/1*UTCLKbdQmnyywpPqa6aNkw.png)
 
 ```py
 # project > app > serializers.py
