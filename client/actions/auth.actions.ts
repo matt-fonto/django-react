@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 
-type SignInReturn = {
+type LoginReturn = {
   success: boolean;
   errorMessage: string | null;
   errorStatus: string | null;
@@ -17,12 +17,17 @@ type JWTResponse = {
  * Fetch the access and refresh tokens based on username and password
  * Set them in the cookies
  */
-export async function signin(
+export async function authenticate(
   username: string,
-  password: string
-): Promise<SignInReturn> {
+  password: string,
+  behavior: "login" | "signup"
+): Promise<LoginReturn> {
+  const baseURL = `${process.env.SERVER_ENDPOINT}/api/`;
+  const endpoint = behavior === "login" ? "token/" : "user/register/";
+  const completeURL = `${baseURL}${endpoint}`;
+
   try {
-    const response = await fetch(`${process.env.SERVER_ENDPOINT}/api/token/`, {
+    const response = await fetch(completeURL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
@@ -89,9 +94,11 @@ export async function logout() {
     cookieStore.delete("ACCESS_TOKEN");
     cookieStore.delete("REFRESH_TOKEN");
 
+    const data: { message: string } = await response.json();
+
     return {
       success: true,
-      message: await response.json().message,
+      message: data,
     };
   } catch (error) {
     console.error("Error during logout", error);
