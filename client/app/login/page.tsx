@@ -15,7 +15,7 @@ export default function LoginPage({ searchParams }: Params) {
         </h2>
       )}
 
-      <AuthenticateForm behavior="login" />
+      <AuthenticateForm behavior="login" onResultRedirectTo="/" />
     </div>
   );
 }

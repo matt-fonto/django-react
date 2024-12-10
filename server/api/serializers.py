@@ -9,7 +9,7 @@ class UserSerializer(serializers.ModelSerializer):
         extra_kwargs = {"password": {"write_only": True}} # make sure the password is not returned in the response
 
     def create(self, validated_data):
-        user = User.objects.create_user(**validated_data) # ** is used to unpack the dictionary
+        user = User.objects.create_user(**validated_data) #  we use create_user to hash the password and ** is used to unpack the dictionary
         return user
     
 class NoteSerializer(serializers.ModelSerializer):

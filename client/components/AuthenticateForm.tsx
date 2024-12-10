@@ -6,8 +6,10 @@ import { FormEvent, useState } from "react";
 
 export function AuthenticateForm({
   behavior,
+  onResultRedirectTo,
 }: {
   behavior: "login" | "signup";
+  onResultRedirectTo: string;
 }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -15,11 +17,10 @@ export function AuthenticateForm({
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-
     const { success } = await authenticate(username, password, behavior);
 
     if (success) {
-      router.push(behavior === "login" ? "/" : "/login?success=true");
+      router.push(onResultRedirectTo);
     }
   }
 

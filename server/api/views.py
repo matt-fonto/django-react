@@ -15,6 +15,7 @@ from .models import Note
 class CreateUserView(generics.CreateAPIView):
     queryset = User.objects.all() # queryset: specify the data this view works with
     serializer_class = UserSerializer # serializer_class: specify the serializer used to validate and transform data
+    # allow unauthenticated users to create a new user
     permission_classes = [AllowAny] # permission_classes: defines who can access this view
 
 # get all users

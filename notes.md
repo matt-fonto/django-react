@@ -439,3 +439,108 @@ urlsPatterns = [
    path("blogposts/<int:pk>/", BlogPostDetailView.as_view(), name="blogpost-detail")
 ]
 ```
+
+## Authentication and Authorization
+
+- Django has a built-in authentication, which includes login, logout, password management, and permissions
+
+1. Configure the Middleware in the project's `settings.py`
+
+```py
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ]
+}
+
+INSTALLED_APPS = [
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.admin',
+    ...
+]
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+   ...
+]
+```
+
+2. Create the Serializer and the View in the project's app
+
+```py
+project > app > serializers.py
+
+# how the user looks like | validation of the user
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User # the model to serialize
+        fields = ["id", "username", "password"] # the fields to serialize
+        extra_kwargs = {"password": {"write_only": True}} # make sure the password is not returned in the response
+
+    def create(self, validated_data):
+        user = User.objects.create_user(**validated_data) # ** is used to unpack the dictionary
+        return user
+
+project > app > views.py
+class CreateUserView(generics.CreateAPIView):
+    queryset = User.objects.all() # queryset: specify the data this view works with
+    serializer_class = UserSerializer # serializer_class: specify the serializer used to validate and transform data
+    permission_classes = [AllowAny] # permission_classes: defines who can access this view
+```
+
+3. Add the authentication views on the urls path
+
+```py
+urlpatterns = [
+   ...
+    path("api/user/register/", CreateUserView.as_view(), name="register"), # link register view
+    path("api/user/logout/", LogoutView.as_view(), name="logout"),
+
+    # api-auth
+    path("api/token/", TokenObtainPairView.as_view(), name="get_token"), # link TokenObtainPairView
+    path("api/token/refresh/", TokenRefreshView.as_view(), name="refresh"), # link TokenRefresh view
+    path("api-auth/", include("rest_framework.urls")), # link pre-built rest_frameworks
+    ...
+]
+```
+
+4. Creating Logout logic
+
+```py
+project > app > views.py
+
+class LogoutView(APIView):
+    permission_classes = [AllowAny]
+    parser_classes = [JSONParser, FormParser]  # Enable JSON and form-data parsing
+
+    def post(self, request):
+        try:
+            print(request.data)
+            refresh_token = request.data.get("refresh")
+            print(refresh_token)
+
+            if not refresh_token:
+                return Response({"error": "Refresh token is required"}, status=400)
+
+            token = RefreshToken(refresh_token)
+
+            if token.get("token_type") != "refresh":
+                return Response({"error": "Invalid token type. Refresh token required."}, status=400)
+            token.blacklist() # add the token to the blacklist
+
+            return Response({"message": "You have been logged out"}, status=200)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
+
+```
