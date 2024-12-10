@@ -1,18 +1,24 @@
 import { jwtDecode } from "jwt-decode";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { fetchWithAuth } from "./fetchWithAuth";
 
-type Token = string;
+type AuthenticateUserReturn = {
+  isAuthenticated: boolean;
+  token: string | null;
+  error: unknown;
+};
 
-// TODO: When we login, we should set the access and refresh tokens on the cookies
-export async function authenticateUser(): Promise<Token | null> {
+export async function authenticateUser(): Promise<AuthenticateUserReturn> {
   const cookieStore = cookies();
   const accessToken = cookieStore.get("ACCESS_TOKEN")?.value ?? undefined;
   const refreshToken = cookieStore.get("REFRESH_TOKEN")?.value ?? undefined;
 
   if (!accessToken || !refreshToken) {
-    redirect("/login");
+    return {
+      isAuthenticated: false,
+      token: null,
+      error: "No access or refresh token",
+    };
   }
 
   try {
@@ -25,21 +31,33 @@ export async function authenticateUser(): Promise<Token | null> {
       const newAccessToken = await getNewAccessToken(refreshToken);
 
       if (!newAccessToken) {
-        redirect("/login");
+        return {
+          isAuthenticated: false,
+          token: null,
+          error: "Could not refresh token",
+        };
       }
 
-      return newAccessToken;
+      return { token: newAccessToken, isAuthenticated: true, error: null };
     }
 
     console.log("token is not expired", accessToken);
-    return accessToken;
+    return {
+      token: accessToken,
+      isAuthenticated: true,
+      error: null,
+    };
   } catch (error) {
-    console.log("error", error);
-    redirect("/login");
+    console.log("Error authenticating user: ", error);
+    return {
+      isAuthenticated: false,
+      token: null,
+      error,
+    };
   }
 }
 
-async function getNewAccessToken(refreshToken: string): Promise<Token | null> {
+async function getNewAccessToken(refreshToken: string): Promise<string | null> {
   try {
     const response = await fetchWithAuth("token/refresh/", {
       method: "POST",

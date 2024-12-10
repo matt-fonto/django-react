@@ -1,8 +1,15 @@
 from django.contrib.auth.models import User
+
 from rest_framework import generics
-from .serializers import UserSerializer, NoteSerializer
+from rest_framework.views import APIView
+from rest_framework.parsers import JSONParser, FormParser
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated, AllowAny
+
+from .serializers import UserSerializer, NoteSerializer
 from .models import Note
+
 
 # Create your views here.
 class CreateUserView(generics.CreateAPIView):
@@ -50,3 +57,25 @@ class NoteDetailView(generics.RetrieveUpdateDestroyAPIView):
     def perform_destroy(self, instance):
         instance.delete() """
 
+class LogoutView(APIView):
+    permission_classes = [AllowAny]
+    parser_classes = [JSONParser, FormParser]  # Enable JSON and form-data parsing
+
+    def post(self, request):
+        try:
+            print(request.data)
+            refresh_token = request.data.get("refresh")
+            print(refresh_token)
+
+            if not refresh_token:
+                return Response({"error": "Refresh token is required"}, status=400)
+
+            token = RefreshToken(refresh_token)
+            
+            if token.get("token_type") != "refresh":
+                return Response({"error": "Invalid token type. Refresh token required."}, status=400)
+            token.blacklist() # add the token to the blacklist
+
+            return Response({"message": "You have been logged out"}, status=200)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
