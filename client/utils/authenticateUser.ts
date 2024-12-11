@@ -1,6 +1,6 @@
 import { jwtDecode } from "jwt-decode";
 import { cookies } from "next/headers";
-import { fetchWithAuth } from "./fetchWithAuth";
+import { api } from "./api";
 
 type AuthenticateUserReturn = {
   isAuthenticated: boolean;
@@ -59,9 +59,12 @@ export async function authenticateUser(): Promise<AuthenticateUserReturn> {
 
 async function getNewAccessToken(refreshToken: string): Promise<string | null> {
   try {
-    const response = await fetchWithAuth("token/refresh/", {
+    const response = await api({
+      query: "token/refresh",
       method: "POST",
-      body: JSON.stringify({ refresh: refreshToken }),
+      options: {
+        body: JSON.stringify({ refresh: refreshToken }),
+      },
     });
 
     if (!response.ok) {

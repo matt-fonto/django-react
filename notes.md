@@ -544,3 +544,27 @@ class LogoutView(APIView):
             return Response({"error": str(e)}, status=400)
 
 ```
+
+# SCRUM
+
+1. Roles
+
+- Product Owner: Defines the product vision, manages the backlog, and prioritizes work.
+- Scrum Master: Facilitates the Scrum process, removes obstacles, and ensures adhrerence to Scrum principles.
+- Development team: Team responsible for delivering the product increment
+
+2. Artifacts
+
+- Product backlog: Prioritized list of work for the team, maintained by the Product Owner
+- Sprint backlog: Subset of items from the product backlog planned for the Sprint
+- Increment: A working, shippable piece of the product at the end of a Sprint
+
+3. Cerimonies
+
+- Sprint planning: Meeting to define the Sprint Goal and select backlog items for the Sprint
+- Daily Scrum: Short daily meeting (15 min. max) to discuss progress, blockers, and plans
+  - What did you do yesterday?
+  - What will you do today?
+  - Are there any impediments?
+- Sprint Review: End-of-Sprint demo or presentation of the increment to stakeholders
+- Sprint Retrospective: Reflection on the Sprint to identify areas for improvements
